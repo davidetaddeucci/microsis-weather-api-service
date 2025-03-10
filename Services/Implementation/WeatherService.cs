@@ -99,7 +99,8 @@ public class WeatherService : IWeatherService
                             $"&q={Uri.EscapeDataString(request.Location)}" +
                             $"&days={request.Days}" +
                             $"&aqi={(request.AirQuality ? "yes" : "no")}" +
-                            $"&alerts={(request.Alerts ? "yes" : "no")}";
+                            $"&alerts={(request.Alerts ? "yes" : "no")}" +
+                            $"&astronomy=yes"; // Includi dati astronomici
             
             Logger.LogInformation("Richiesta API: {RequestUri}", requestUri);
             
@@ -209,17 +210,29 @@ public class WeatherService : IWeatherService
         // Aggiungi le previsioni giornaliere se disponibili
         if (response.Forecast?.ForecastDays != null)
         {
-            result.DailyForecasts = response.Forecast.ForecastDays.Select(fd => new DailyForecastDto
-            {
-                Date = DateTime.Parse(fd.Date),
-                MaxTemp = fd.Day.MaxTempC,
-                MinTemp = fd.Day.MinTempC,
-                AvgTemp = fd.Day.AvgTempC,
-                Condition = fd.Day.Condition.Text,
-                ConditionIcon = FixIconUrl(fd.Day.Condition.Icon),
-                ChanceOfRain = fd.Day.ChanceOfRain,
-                Sunrise = fd.Astro.Sunrise,
-                Sunset = fd.Astro.Sunset
+            result.DailyForecasts = response.Forecast.ForecastDays.Select(fd => {
+                var dto = new DailyForecastDto
+                {
+                    Date = DateTime.Parse(fd.Date),
+                    MaxTemp = fd.Day.MaxTempC,
+                    MinTemp = fd.Day.MinTempC,
+                    AvgTemp = fd.Day.AvgTempC,
+                    Condition = fd.Day.Condition.Text,
+                    ConditionIcon = FixIconUrl(fd.Day.Condition.Icon),
+                    ChanceOfRain = fd.Day.ChanceOfRain,
+                    
+                    // Dati astronomici base dalla previsione
+                    Sunrise = fd.Astro.Sunrise,
+                    Sunset = fd.Astro.Sunset,
+                    Moonrise = fd.Astro.Moonrise,
+                    Moonset = fd.Astro.Moonset,
+                    MoonPhase = fd.Astro.MoonPhase,
+                    MoonIllumination = fd.Astro.MoonIllumination,
+                    IsMoonUp = fd.Astro.IsMoonUp == 1,
+                    IsSunUp = fd.Astro.IsSunUp == 1
+                };
+                
+                return dto;
             }).ToList();
         }
         
