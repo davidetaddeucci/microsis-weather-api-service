@@ -12,6 +12,15 @@ public class WeatherForecastResponse
     
     [JsonPropertyName("forecast")]
     public Forecast Forecast { get; set; } = new();
+    
+    [JsonPropertyName("astronomy")]
+    public AstronomyInfo Astronomy { get; set; } = new();
+}
+
+public class AstronomyInfo
+{
+    [JsonPropertyName("astro")]
+    public Astro Astro { get; set; } = new();
 }
 
 public class Location
@@ -144,6 +153,15 @@ public class Astro
     
     [JsonPropertyName("moon_phase")]
     public string MoonPhase { get; set; } = string.Empty;
+    
+    [JsonPropertyName("moon_illumination")]
+    public int MoonIllumination { get; set; }
+    
+    [JsonPropertyName("is_moon_up")]
+    public int IsMoonUp { get; set; }
+    
+    [JsonPropertyName("is_sun_up")]
+    public int IsSunUp { get; set; }
 }
 
 public class Hour
@@ -197,6 +215,14 @@ public class DailyForecastDto
     public string Condition { get; set; } = string.Empty;
     public string ConditionIcon { get; set; } = string.Empty;
     public int ChanceOfRain { get; set; }
+    
+    // Informazioni astronomiche
     public string Sunrise { get; set; } = string.Empty;
     public string Sunset { get; set; } = string.Empty;
+    public string Moonrise { get; set; } = string.Empty;
+    public string Moonset { get; set; } = string.Empty;
+    public string MoonPhase { get; set; } = string.Empty;
+    public int MoonIllumination { get; set; }
+    public bool IsMoonUp { get; set; }
+    public bool IsSunUp { get; set; }
 }
