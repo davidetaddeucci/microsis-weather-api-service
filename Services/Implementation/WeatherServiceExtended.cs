@@ -117,6 +117,8 @@ public class WeatherServiceExtended : WeatherService, IWeatherServiceExtended
         {
             var results = new List<DailyHistoryDto>();
             var currentDate = startDate;
+            string locationName = location;
+            string countryName = string.Empty;
             
             // WeatherAPI.com ha un endpoint per la storia, ma può essere necessario fare più chiamate
             // per coprire un intervallo di date. Se c'è un endpoint history/range, usare quello sarebbe preferibile.
@@ -149,6 +151,13 @@ public class WeatherServiceExtended : WeatherService, IWeatherServiceExtended
                         AvgWindKph = day.Day.MaxwindKph,
                         WindDirection = GetPredominantWindDirection(day.Hours)
                     });
+                    
+                    // Salva le informazioni di località dal primo risultato
+                    if (string.IsNullOrEmpty(countryName) && historyData.Location != null)
+                    {
+                        locationName = historyData.Location.Name;
+                        countryName = historyData.Location.Country;
+                    }
                 }
                 
                 currentDate = currentDate.AddDays(1);
@@ -156,8 +165,8 @@ public class WeatherServiceExtended : WeatherService, IWeatherServiceExtended
             
             return new WeatherHistoryDto
             {
-                Location = historyData?.Location.Name ?? location,
-                Country = historyData?.Location.Country ?? string.Empty,
+                Location = locationName,
+                Country = countryName,
                 StartDate = startDate,
                 EndDate = endDate,
                 DailyData = results
