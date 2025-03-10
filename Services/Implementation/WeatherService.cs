@@ -10,21 +10,23 @@ namespace WeatherAPI.Services.Implementation;
 /// </summary>
 public class WeatherService : IWeatherService
 {
-    private readonly HttpClient _httpClient;
-    private readonly WeatherApiOptions _options;
-    private readonly ILogger<WeatherService> _logger;
+    protected readonly HttpClient HttpClient;
+    protected readonly WeatherApiOptions Options;
+    protected readonly ILogger<WeatherService> Logger;
+
+    protected string ApiKey => Options.ApiKey;
 
     public WeatherService(
         HttpClient httpClient,
         IOptions<WeatherApiOptions> options,
         ILogger<WeatherService> logger)
     {
-        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        HttpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        Options = options?.Value ?? throw new ArgumentNullException(nameof(options));
+        Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         
         // Configura l'URL base per l'API esterna
-        _httpClient.BaseAddress = new Uri("https://api.weatherapi.com/v1/");
+        HttpClient.BaseAddress = new Uri("https://api.weatherapi.com/v1/");
     }
 
     /// <inheritdoc />
@@ -33,10 +35,10 @@ public class WeatherService : IWeatherService
         try
         {
             // Costruisci l'URL con i parametri necessari
-            var requestUri = $"current.json?key={_options.ApiKey}&q={Uri.EscapeDataString(location)}&aqi=no";
+            var requestUri = $"current.json?key={ApiKey}&q={Uri.EscapeDataString(location)}&aqi=no";
             
             // Effettua la richiesta HTTP
-            var response = await _httpClient.GetAsync(requestUri);
+            var response = await HttpClient.GetAsync(requestUri);
             response.EnsureSuccessStatusCode();
             
             // Deserializza la risposta
@@ -51,12 +53,12 @@ public class WeatherService : IWeatherService
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "Errore durante la richiesta delle previsioni meteo correnti per {Location}", location);
+            Logger.LogError(ex, "Errore durante la richiesta delle previsioni meteo correnti per {Location}", location);
             throw new ApplicationException($"Impossibile ottenere le previsioni meteo per {location}", ex);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Errore durante l'elaborazione delle previsioni meteo per {Location}", location);
+            Logger.LogError(ex, "Errore durante l'elaborazione delle previsioni meteo per {Location}", location);
             throw;
         }
     }
@@ -74,14 +76,14 @@ public class WeatherService : IWeatherService
                 request.Days = 3; // Usa un valore predefinito se fuori intervallo
             
             // Costruisci l'URL con i parametri necessari
-            var requestUri = $"forecast.json?key={_options.ApiKey}" +
+            var requestUri = $"forecast.json?key={ApiKey}" +
                             $"&q={Uri.EscapeDataString(request.Location)}" +
                             $"&days={request.Days}" +
                             $"&aqi={(request.AirQuality ? "yes" : "no")}" +
                             $"&alerts={(request.Alerts ? "yes" : "no")}";
             
             // Effettua la richiesta HTTP
-            var response = await _httpClient.GetAsync(requestUri);
+            var response = await HttpClient.GetAsync(requestUri);
             response.EnsureSuccessStatusCode();
             
             // Deserializza la risposta
@@ -96,12 +98,12 @@ public class WeatherService : IWeatherService
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "Errore durante la richiesta delle previsioni meteo per {Location}", request.Location);
+            Logger.LogError(ex, "Errore durante la richiesta delle previsioni meteo per {Location}", request.Location);
             throw new ApplicationException($"Impossibile ottenere le previsioni meteo per {request.Location}", ex);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Errore durante l'elaborazione delle previsioni meteo per {Location}", request.Location);
+            Logger.LogError(ex, "Errore durante l'elaborazione delle previsioni meteo per {Location}", request.Location);
             throw;
         }
     }
@@ -115,10 +117,10 @@ public class WeatherService : IWeatherService
                 return Enumerable.Empty<string>();
             
             // Costruisci l'URL per la ricerca delle località
-            var requestUri = $"search.json?key={_options.ApiKey}&q={Uri.EscapeDataString(query)}";
+            var requestUri = $"search.json?key={ApiKey}&q={Uri.EscapeDataString(query)}";
             
             // Effettua la richiesta HTTP
-            var response = await _httpClient.GetAsync(requestUri);
+            var response = await HttpClient.GetAsync(requestUri);
             response.EnsureSuccessStatusCode();
             
             // Deserializza la risposta come array di location
@@ -133,12 +135,12 @@ public class WeatherService : IWeatherService
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "Errore durante la ricerca delle località per la query {Query}", query);
+            Logger.LogError(ex, "Errore durante la ricerca delle località per la query {Query}", query);
             return Enumerable.Empty<string>();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Errore durante l'elaborazione della ricerca località per {Query}", query);
+            Logger.LogError(ex, "Errore durante l'elaborazione della ricerca località per {Query}", query);
             return Enumerable.Empty<string>();
         }
     }
@@ -199,11 +201,6 @@ public class WeatherService : IWeatherService
     }
     
     #endregion
-    
-    // Proprietà protette per l'accesso dalle classi derivate
-    protected HttpClient HttpClient => _httpClient;
-    protected string ApiKey => _options.ApiKey;
-    protected ILogger Logger => _logger;
 }
 
 /// <summary>

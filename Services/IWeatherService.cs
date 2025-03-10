@@ -28,25 +28,3 @@ public interface IWeatherService
     /// <returns>Lista di località corrispondenti</returns>
     Task<IEnumerable<string>> SearchLocationsAsync(string query);
 }
-
-/// <summary>
-/// Interfaccia estesa del servizio meteo con funzionalità aggiuntive
-/// </summary>
-public interface IWeatherServiceExtended : IWeatherService
-{
-    /// <summary>
-    /// Ottiene le previsioni meteo per un'area geografica rettangolare
-    /// </summary>
-    /// <param name="request">Richiesta con parametri dell'area e della previsione</param>
-    /// <returns>Previsioni aggregate per l'area</returns>
-    Task<WeatherAreaForecastDto> GetAreaForecastAsync(WeatherAreaRequest request);
-    
-    /// <summary>
-    /// Ottiene dati meteorologici storici per una località
-    /// </summary>
-    /// <param name="location">Località o coordinate</param>
-    /// <param name="startDate">Data di inizio</param>
-    /// <param name="endDate">Data di fine</param>
-    /// <returns>Dati storici per il periodo specificato</returns>
-    Task<WeatherHistoryDto> GetHistoricalDataAsync(string location, DateTime startDate, DateTime endDate);
-}
