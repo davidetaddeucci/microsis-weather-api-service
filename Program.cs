@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
+using Microsoft.OpenApi.Models;
 using Polly;
 using Polly.Extensions.Http;
 using WeatherAPI.Services;
@@ -12,16 +12,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<WeatherApiOptions>(
     builder.Configuration.GetSection(WeatherApiOptions.SectionName));
 
-// Registra HttpClient con resilienza
+// Aggiungi servizi al container
+builder.Services.AddScoped<IWeatherService, WeatherService>();
+builder.Services.AddScoped<IWeatherServiceExtended, WeatherServiceExtended>();
+
+// Registra HttpClient con policy di resilienza
 builder.Services.AddHttpClient<IWeatherServiceExtended, WeatherServiceExtended>((provider, client) => {
     var options = provider.GetRequiredService<IOptions<WeatherApiOptions>>().Value;
     client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
 })
 .AddPolicyHandler(GetRetryPolicy(builder.Configuration));
-
-// Aggiungi servizi al container
-builder.Services.AddScoped<IWeatherService, WeatherService>();
-builder.Services.AddScoped<IWeatherServiceExtended, WeatherServiceExtended>();
 
 // Aggiungi controller
 builder.Services.AddControllers()
@@ -46,8 +46,23 @@ builder.Services.AddApiVersioning(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new() { Title = "Servizio Previsioni Meteo API", Version = "v1" });
-    c.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "WeatherAPI.xml"));
+    c.SwaggerDoc("v1", new OpenApiInfo { 
+        Title = "Servizio Previsioni Meteo API", 
+        Version = "v1",
+        Description = "API per le previsioni meteorologiche utilizzando WeatherAPI.com",
+        Contact = new OpenApiContact
+        {
+            Name = "Microsis",
+            Email = "info@microsis.com",
+            Url = new Uri("https://microsis.com")
+        }
+    });
+    
+    // Aggiungi commenti XML per la documentazione
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    c.IncludeXmlComments(xmlPath);
+    
     c.EnableAnnotations();
 });
 
@@ -83,7 +98,11 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Weather API v1");
+        c.RoutePrefix = "swagger";
+    });
     app.UseDeveloperExceptionPage();
 }
 else
