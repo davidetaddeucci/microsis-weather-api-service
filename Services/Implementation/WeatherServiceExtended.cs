@@ -120,47 +120,134 @@ public class WeatherServiceExtended : WeatherService, IWeatherServiceExtended
             string locationName = location;
             string countryName = string.Empty;
             
-            // WeatherAPI.com ha un endpoint per la storia, ma può essere necessario fare più chiamate
-            // per coprire un intervallo di date. Se c'è un endpoint history/range, usare quello sarebbe preferibile.
-            while (currentDate <= endDate)
+            // Poiché l'API potrebbe richiedere un piano a pagamento per i dati storici, implementiamo
+            // una fallback che utilizza l'API di previsioni per ottenere dati passati recenti
+
+            // Verifica se la data richiesta è molto recente (ultimi 7 giorni)
+            bool isRecent = (DateTime.Today - startDate).TotalDays <= 7;
+
+            if (isRecent)
             {
-                var formattedDate = currentDate.ToString("yyyy-MM-dd");
-                var requestUri = $"history.json?key={ApiKey}" +
-                               $"&q={Uri.EscapeDataString(location)}" +
-                               $"&dt={formattedDate}";
-                
-                var response = await HttpClient.GetAsync(requestUri);
-                response.EnsureSuccessStatusCode();
-                
-                var content = await response.Content.ReadAsStreamAsync();
-                var historyData = await JsonSerializer.DeserializeAsync<WeatherForecastResponse>(content);
-                
-                if (historyData?.Forecast?.ForecastDays?.FirstOrDefault() != null)
+                // Se la data è recente, proviamo a utilizzare le previsioni normali
+                // che potrebbero includere dati per i giorni passati recenti
+                try
                 {
-                    var day = historyData.Forecast.ForecastDays.First();
-                    results.Add(new DailyHistoryDto
+                    Logger.LogInformation("Tentativo di utilizzare l'API forecast per dati storici recenti");
+                    var weatherRequest = new WeatherRequest
                     {
-                        Date = DateTime.Parse(day.Date),
-                        MaxTempC = day.Day.MaxTempC,
-                        MinTempC = day.Day.MinTempC,
-                        AvgTempC = day.Day.AvgTempC,
-                        TotalPrecipitationMm = day.Day.TotalPrecipMm,
-                        AvgHumidity = day.Day.AvgHumidity,
-                        Condition = day.Day.Condition.Text,
-                        ConditionIcon = FixIconUrl(day.Day.Condition.Icon),
-                        AvgWindKph = day.Day.MaxwindKph,
-                        WindDirection = GetPredominantWindDirection(day.Hours)
-                    });
-                    
-                    // Salva le informazioni di località dal primo risultato
-                    if (string.IsNullOrEmpty(countryName) && historyData.Location != null)
+                        Location = location,
+                        Days = 7, // Massimo disponibile senza piano premium
+                        AirQuality = false,
+                        Alerts = false
+                    };
+
+                    var forecast = await GetForecastAsync(weatherRequest);
+                    locationName = forecast.Location;
+                    countryName = forecast.Country;
+
+                    // Filtra solo i giorni richiesti
+                    foreach (var dailyForecast in forecast.DailyForecasts)
                     {
-                        locationName = historyData.Location.Name;
-                        countryName = historyData.Location.Country;
+                        if (dailyForecast.Date.Date >= startDate.Date && dailyForecast.Date.Date <= endDate.Date)
+                        {
+                            results.Add(new DailyHistoryDto
+                            {
+                                Date = dailyForecast.Date,
+                                MaxTempC = dailyForecast.MaxTemp,
+                                MinTempC = dailyForecast.MinTemp,
+                                AvgTempC = (dailyForecast.MaxTemp + dailyForecast.MinTemp) / 2,
+                                Condition = dailyForecast.Condition,
+                                ConditionIcon = dailyForecast.ConditionIcon,
+                                TotalPrecipitationMm = 0, // Non disponibile nelle previsioni base
+                                AvgHumidity = 0, // Non disponibile nelle previsioni base
+                                AvgWindKph = 0, // Non disponibile nelle previsioni base
+                                WindDirection = ""
+                            });
+                        }
+                    }
+
+                    if (results.Count > 0)
+                    {
+                        Logger.LogInformation("Ottenuti {Count} giorni di dati storici dall'API forecast", results.Count);
+                        return new WeatherHistoryDto
+                        {
+                            Location = locationName,
+                            Country = countryName,
+                            StartDate = startDate,
+                            EndDate = endDate,
+                            DailyData = results
+                        };
                     }
                 }
-                
-                currentDate = currentDate.AddDays(1);
+                catch (Exception ex)
+                {
+                    Logger.LogWarning(ex, "Fallito il tentativo di utilizzare l'API forecast per dati storici");
+                    // Procediamo con il tentativo di utilizzare l'API history
+                }
+            }
+
+            // Se siamo arrivati qui, o la data non è recente o il tentativo con forecast è fallito
+            // Proviamo ad usare l'API history (che potrebbe richiedere un piano premium)
+
+            // Per l'API history, utilizziamo sia dt che end_dt come richiesto dalla documentazione
+            var formattedStartDate = startDate.ToString("yyyy-MM-dd");
+            var formattedEndDate = endDate.ToString("yyyy-MM-dd");
+            
+            // Costruisci la richiesta con entrambi i parametri di data
+            var requestUri = $"history.json?key={ApiKey}" +
+                          $"&q={Uri.EscapeDataString(location)}" +
+                          $"&dt={formattedStartDate}" +
+                          $"&end_dt={formattedEndDate}";
+            
+            Logger.LogInformation("Richiesta API history: {RequestUri}", requestUri);
+            
+            var response = await HttpClient.GetAsync(requestUri);
+            
+            // Leggi la risposta e logga gli eventuali errori
+            var responseContent = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                Logger.LogError("Errore API history: {StatusCode}, Risposta: {Response}", 
+                    response.StatusCode, responseContent);
+                throw new HttpRequestException($"Errore API WeatherAPI.com: {response.StatusCode}. {responseContent}");
+            }
+            
+            response.EnsureSuccessStatusCode();
+            
+            Logger.LogInformation("Risposta API history: {Response}", responseContent);
+            
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            var historyData = JsonSerializer.Deserialize<WeatherForecastResponse>(responseContent, options);
+            
+            if (historyData?.Forecast?.ForecastDays == null || !historyData.Forecast.ForecastDays.Any())
+            {
+                throw new InvalidOperationException("Nessun dato storico disponibile per le date specificate");
+            }
+            
+            foreach (var day in historyData.Forecast.ForecastDays)
+            {
+                results.Add(new DailyHistoryDto
+                {
+                    Date = DateTime.Parse(day.Date),
+                    MaxTempC = day.Day.MaxTempC,
+                    MinTempC = day.Day.MinTempC,
+                    AvgTempC = day.Day.AvgTempC,
+                    TotalPrecipitationMm = day.Day.TotalPrecipMm,
+                    AvgHumidity = day.Day.AvgHumidity,
+                    Condition = day.Day.Condition.Text,
+                    ConditionIcon = FixIconUrl(day.Day.Condition.Icon),
+                    AvgWindKph = day.Day.MaxwindKph,
+                    WindDirection = GetPredominantWindDirection(day.Hours)
+                });
+            }
+            
+            if (historyData.Location != null)
+            {
+                locationName = historyData.Location.Name;
+                countryName = historyData.Location.Country;
             }
             
             return new WeatherHistoryDto
