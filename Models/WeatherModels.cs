@@ -90,16 +90,16 @@ public class Day
     [JsonPropertyName("daily_chance_of_rain")]
     public int ChanceOfRain { get; set; }
     
-    public Condition Condition { get; set; } = new();
-    
+    [JsonPropertyName("totalrain_mm")]
+    public double TotalPrecipMm { get; set; }
+
+    [JsonPropertyName("avghumidity")]
+    public double AvgHumidity { get; set; }
+
     [JsonPropertyName("maxwind_kph")]
     public double MaxwindKph { get; set; }
     
-    [JsonPropertyName("avghumidity")]
-    public double AvgHumidity { get; set; }
-    
-    [JsonPropertyName("totalprecip_mm")]
-    public double TotalPrecipMm { get; set; }
+    public Condition Condition { get; set; } = new();
 }
 
 public class Astro
@@ -122,14 +122,11 @@ public class Hour
     
     [JsonPropertyName("chance_of_rain")]
     public int ChanceOfRain { get; set; }
-    
-    public Condition Condition { get; set; } = new();
-    
-    [JsonPropertyName("wind_kph")]
-    public double WindKph { get; set; }
-    
+
     [JsonPropertyName("wind_dir")]
     public string WindDir { get; set; } = string.Empty;
+    
+    public Condition Condition { get; set; } = new();
 }
 
 // Modello per le richieste di previsioni meteo
