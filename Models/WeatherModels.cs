@@ -4,18 +4,34 @@ namespace WeatherAPI.Models;
 
 public class WeatherForecastResponse
 {
+    [JsonPropertyName("location")]
     public Location Location { get; set; } = new();
+    
+    [JsonPropertyName("current")]
     public Current Current { get; set; } = new();
+    
+    [JsonPropertyName("forecast")]
     public Forecast Forecast { get; set; } = new();
 }
 
 public class Location
 {
+    [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
+    
+    [JsonPropertyName("region")]
     public string Region { get; set; } = string.Empty;
+    
+    [JsonPropertyName("country")]
     public string Country { get; set; } = string.Empty;
+    
+    [JsonPropertyName("lat")]
     public double Lat { get; set; }
+    
+    [JsonPropertyName("lon")]
     public double Lon { get; set; }
+    
+    [JsonPropertyName("localtime")]
     public string Localtime { get; set; } = string.Empty;
 }
 
@@ -30,6 +46,7 @@ public class Current
     [JsonPropertyName("temp_f")]
     public double TemperatureF { get; set; }
     
+    [JsonPropertyName("condition")]
     public Condition Condition { get; set; } = new();
     
     [JsonPropertyName("wind_kph")]
@@ -50,8 +67,13 @@ public class Current
 
 public class Condition
 {
+    [JsonPropertyName("text")]
     public string Text { get; set; } = string.Empty;
+    
+    [JsonPropertyName("icon")]
     public string Icon { get; set; } = string.Empty;
+    
+    [JsonPropertyName("code")]
     public int Code { get; set; }
 }
 
@@ -63,13 +85,16 @@ public class Forecast
 
 public class ForecastDay
 {
+    [JsonPropertyName("date")]
     public string Date { get; set; } = string.Empty;
     
     [JsonPropertyName("date_epoch")]
     public long DateEpoch { get; set; }
     
+    [JsonPropertyName("day")]
     public Day Day { get; set; } = new();
     
+    [JsonPropertyName("astro")]
     public Astro Astro { get; set; } = new();
     
     [JsonPropertyName("hour")]
@@ -90,7 +115,7 @@ public class Day
     [JsonPropertyName("daily_chance_of_rain")]
     public int ChanceOfRain { get; set; }
     
-    [JsonPropertyName("totalrain_mm")]
+    [JsonPropertyName("totalprecip_mm")]
     public double TotalPrecipMm { get; set; }
 
     [JsonPropertyName("avghumidity")]
@@ -99,14 +124,22 @@ public class Day
     [JsonPropertyName("maxwind_kph")]
     public double MaxwindKph { get; set; }
     
+    [JsonPropertyName("condition")]
     public Condition Condition { get; set; } = new();
 }
 
 public class Astro
 {
+    [JsonPropertyName("sunrise")]
     public string Sunrise { get; set; } = string.Empty;
+    
+    [JsonPropertyName("sunset")]
     public string Sunset { get; set; } = string.Empty;
+    
+    [JsonPropertyName("moonrise")]
     public string Moonrise { get; set; } = string.Empty;
+    
+    [JsonPropertyName("moonset")]
     public string Moonset { get; set; } = string.Empty;
     
     [JsonPropertyName("moon_phase")]
@@ -115,6 +148,7 @@ public class Astro
 
 public class Hour
 {
+    [JsonPropertyName("time")]
     public string Time { get; set; } = string.Empty;
     
     [JsonPropertyName("temp_c")]
@@ -126,6 +160,7 @@ public class Hour
     [JsonPropertyName("wind_dir")]
     public string WindDir { get; set; } = string.Empty;
     
+    [JsonPropertyName("condition")]
     public Condition Condition { get; set; } = new();
 }
 
