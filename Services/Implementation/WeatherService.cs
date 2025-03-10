@@ -37,19 +37,38 @@ public class WeatherService : IWeatherService
             // Costruisci l'URL con i parametri necessari
             var requestUri = $"current.json?key={ApiKey}&q={Uri.EscapeDataString(location)}&aqi=no";
             
+            Logger.LogInformation("Richiesta API: {RequestUri}", requestUri);
+            
             // Effettua la richiesta HTTP
             var response = await HttpClient.GetAsync(requestUri);
             response.EnsureSuccessStatusCode();
             
+            // Leggi il contenuto della risposta come stringa per il log
+            var contentString = await response.Content.ReadAsStringAsync();
+            Logger.LogInformation("Risposta API: {Response}", contentString);
+            
             // Deserializza la risposta
-            var content = await response.Content.ReadAsStreamAsync();
-            var weatherData = await JsonSerializer.DeserializeAsync<WeatherForecastResponse>(content);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            var weatherData = JsonSerializer.Deserialize<WeatherForecastResponse>(contentString, options);
             
             if (weatherData == null)
                 throw new JsonException("Impossibile deserializzare i dati meteo");
+                
+            Logger.LogInformation("WeatherData deserializzato: Location={Location}, Temp={Temp}", 
+                weatherData.Location.Name, 
+                weatherData.Current.TemperatureC);
             
             // Converti i dati nel DTO
-            return MapToWeatherForecastDto(weatherData);
+            var result = MapToWeatherForecastDto(weatherData);
+            
+            Logger.LogInformation("DTO mappato: Location={Location}, Temp={Temp}", 
+                result.Location, 
+                result.CurrentTemperature);
+                
+            return result;
         }
         catch (HttpRequestException ex)
         {
@@ -82,19 +101,40 @@ public class WeatherService : IWeatherService
                             $"&aqi={(request.AirQuality ? "yes" : "no")}" +
                             $"&alerts={(request.Alerts ? "yes" : "no")}";
             
+            Logger.LogInformation("Richiesta API: {RequestUri}", requestUri);
+            
             // Effettua la richiesta HTTP
             var response = await HttpClient.GetAsync(requestUri);
             response.EnsureSuccessStatusCode();
             
+            // Leggi il contenuto della risposta come stringa per il log
+            var contentString = await response.Content.ReadAsStringAsync();
+            Logger.LogInformation("Risposta API: {Response}", contentString);
+            
             // Deserializza la risposta
-            var content = await response.Content.ReadAsStreamAsync();
-            var weatherData = await JsonSerializer.DeserializeAsync<WeatherForecastResponse>(content);
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            var weatherData = JsonSerializer.Deserialize<WeatherForecastResponse>(contentString, options);
             
             if (weatherData == null)
                 throw new JsonException("Impossibile deserializzare i dati meteo");
             
+            Logger.LogInformation("WeatherData deserializzato: Location={Location}, Temp={Temp}, ForecastDays={Count}", 
+                weatherData.Location.Name, 
+                weatherData.Current.TemperatureC,
+                weatherData.Forecast?.ForecastDays?.Count ?? 0);
+            
             // Converti i dati nel DTO
-            return MapToWeatherForecastDto(weatherData);
+            var result = MapToWeatherForecastDto(weatherData);
+            
+            Logger.LogInformation("DTO mappato: Location={Location}, Temp={Temp}, ForecastDays={Count}", 
+                result.Location, 
+                result.CurrentTemperature,
+                result.DailyForecasts?.Count ?? 0);
+                
+            return result;
         }
         catch (HttpRequestException ex)
         {
@@ -124,8 +164,12 @@ public class WeatherService : IWeatherService
             response.EnsureSuccessStatusCode();
             
             // Deserializza la risposta come array di location
-            var content = await response.Content.ReadAsStreamAsync();
-            var locations = await JsonSerializer.DeserializeAsync<List<Location>>(content);
+            var contentString = await response.Content.ReadAsStringAsync();
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            var locations = JsonSerializer.Deserialize<List<Location>>(contentString, options);
             
             if (locations == null)
                 return Enumerable.Empty<string>();
